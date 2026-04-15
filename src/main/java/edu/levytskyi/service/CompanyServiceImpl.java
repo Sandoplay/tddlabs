@@ -3,9 +3,11 @@ package edu.levytskyi.service;
 import edu.levytskyi.model.Company;
 import edu.levytskyi.repository.DatabaseManager;
 import edu.levytskyi.request.CompanyCreateRequest;
+import edu.levytskyi.request.CompanyPageRequest;
 import edu.levytskyi.response.ApiResponse;
 import edu.levytskyi.response.BaseMetaData;
 
+import edu.levytskyi.response.PaginationMetaData;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -134,4 +136,15 @@ public class CompanyServiceImpl implements ICompanyService {
         } catch (SQLException e) { e.printStackTrace(); }
         return null;
     }
+
+    @Override
+    public ApiResponse<PaginationMetaData, Company> getCompaniesPage(CompanyPageRequest request) {
+        List<Company> all = getAll();
+        int start = request.page() * request.size();
+        int end = Math.min(start + request.size(), all.size());
+        List<Company> pagedData = (start < all.size()) ? all.subList(start, end) : new java.util.ArrayList<>();
+        PaginationMetaData meta = new PaginationMetaData(request.page(), request.size(), all.size());
+        return new ApiResponse<>(meta, pagedData);
+    }
+
 }

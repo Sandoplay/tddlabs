@@ -1,8 +1,10 @@
 package edu.levytskyi.service;
 
 import edu.levytskyi.model.Company;
+import edu.levytskyi.request.CompanyPageRequest;
 import edu.levytskyi.response.ApiResponse;
 import edu.levytskyi.response.BaseMetaData;
+import edu.levytskyi.response.PaginationMetaData;
 import java.util.List;
 import edu.levytskyi.request.CompanyCreateRequest;
 
@@ -18,4 +20,6 @@ public interface ICompanyService {
 
     void deleteById(Long id);
     Company getByCode(String code);
+
+    ApiResponse<PaginationMetaData, Company> getCompaniesPage(CompanyPageRequest request);
 }
