@@ -1,98 +1,126 @@
 package edu.levytskyi;
 
-import org.junit.jupiter.api.Test;
-import java.util.Arrays;
+import edu.levytskyi.model.Company;
+import edu.levytskyi.repository.DatabaseManager;
+import edu.levytskyi.request.CompanyCreateRequest;
+import edu.levytskyi.response.ApiResponse;
+import edu.levytskyi.response.BaseMetaData;
+import edu.levytskyi.service.CompanyServiceImpl;
+import edu.levytskyi.service.ICompanyService;
+import org.junit.jupiter.api.*;
+
+import java.util.ArrayList;
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CompanyServiceTest {
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class CompanyServiceTest {
 
-    private final ICompanyService service = new CompanyServiceImpl();
+    private ICompanyService underTest;
 
-    @Test
-    public void shouldReturnSameCompanyWhenNoParent() {
-        Company top = new Company(null, 10);
-        assertEquals(top, service.getTopLevelParent(top));
+    @BeforeEach
+    void setUp() {
+        DatabaseManager.initDatabase();
+        underTest = new CompanyServiceImpl();
     }
 
     @Test
-    public void shouldReturnTopLevelParentForOneLevelUp() {
-        Company top = new Company(null, 10);
-        Company child = new Company(top, 5);
-        assertEquals(top, service.getTopLevelParent(child));
+    @DisplayName("1. Перевірка загальної кількості компаній (30)")
+    void whenGetAllCompaniesListThenSizeIs30() {
+        assertEquals(30, underTest.getAll().size());
     }
 
     @Test
-    public void shouldReturnTopLevelParentForDeepHierarchy() {
-        Company top = new Company(null, 10);
-        Company middle = new Company(top, 5);
-        Company child = new Company(middle, 2);
-        assertEquals(top, service.getTopLevelParent(child));
+    @DisplayName("2. Отримання існуючої компанії (200 OK)")
+    void whenCompanyIsPresentThenReturnAsOkApiResponse() {
+        ApiResponse<BaseMetaData, Company> response = underTest.getByIdAsApiResponse(1L);
+        assertTrue(response.getMeta().isSuccess());
+        assertEquals(200, response.getMeta().getCode());
     }
 
     @Test
-    public void shouldReturnNullWhenInputIsNull() {
-        assertNull(service.getTopLevelParent(null));
+    @DisplayName("3. Отримання неіснуючої компанії (404 Not Found)")
+    void whenCompanyIsNotPresentThenReturn404() {
+        ApiResponse<BaseMetaData, Company> response = underTest.getByIdAsApiResponse(999L);
+        assertEquals(404, response.getMeta().getCode());
     }
 
     @Test
-    public void shouldReturnOwnEmployeesWhenNoChildren() {
-        Company top = new Company(null, 10);
-        List<Company> allCompanies = Arrays.asList(top);
-        assertEquals(10, service.getEmployeeCountForCompanyAndChildren(top, allCompanies));
+    @DisplayName("4. Створення нової компанії")
+    void whenCreateCompanyThenSizeIncreases() {
+        CompanyCreateRequest request = new CompanyCreateRequest();
+        request.setName("TDD StartUp");
+        request.setCode("TDD-777");
+        request.setEmployeesCount(5);
+
+        underTest.create(request);
+        assertEquals(31, underTest.getAll().size());
     }
 
     @Test
-    public void shouldReturnZeroWhenInputsAreNull() {
-        assertEquals(0, service.getEmployeeCountForCompanyAndChildren(null, null));
-        assertEquals(0, service.getEmployeeCountForCompanyAndChildren(new Company(null, 0), null));
-        assertEquals(0, service.getEmployeeCountForCompanyAndChildren(null, Arrays.asList(new Company(null, 0))));
+    @DisplayName("5. Оновлення імені компанії")
+    void whenUpdateCompanyNameThenItChanges() {
+        underTest.updateName(2L, "Updated Name");
+        assertEquals("Updated Name", underTest.getAll().get(1).getName());
     }
 
     @Test
-    public void shouldReturnOwnEmployeesWhenListIsEmpty() {
-        Company top = new Company(null, 10);
-        assertEquals(10, service.getEmployeeCountForCompanyAndChildren(top, Arrays.asList()));
+    @DisplayName("6. Видалення компанії")
+    void whenDeleteCompanyThenSizeDecreases() {
+        underTest.deleteById(3L);
+        assertEquals(29, underTest.getAll().size());
     }
 
     @Test
-    public void shouldCalculateTotalEmployeesInComplexHierarchy() {
-        Company root = new Company(null, 100);
-        Company branch1 = new Company(root, 50);
-        Company branch2 = new Company(root, 30);
-        Company subBranch1 = new Company(branch1, 20);
-        Company subBranch2 = new Company(branch1, 10);
-        Company leaf = new Company(subBranch2, 5);
-        
-        List<Company> all = Arrays.asList(root, branch1, branch2, subBranch1, subBranch2, leaf);
-        
-        // Root: 100 + 50 + 30 + 20 + 10 + 5 = 215
-        assertEquals(215, service.getEmployeeCountForCompanyAndChildren(root, all));
-        // Branch1: 50 + 20 + 10 + 5 = 85
-        assertEquals(85, service.getEmployeeCountForCompanyAndChildren(branch1, all));
+    @DisplayName("7. Пошук за унікальним кодом")
+    void whenGetByCodeThenReturnCorrectCompany() {
+        String code = "COMP-005"; // Згенеровано в DatabaseManager
+        Company company = underTest.getByCode(code);
+        assertNotNull(company);
+        assertEquals("Компанія №5", company.getName());
     }
 
     @Test
-    public void shouldCountOnlyEmployeesInList() {
-        Company top = new Company(null, 10);
-        Company child = new Company(top, 5);
-        // child is not in the list, so only top's employees should be counted
-        assertEquals(10, service.getEmployeeCountForCompanyAndChildren(top, Arrays.asList(top)));
+    @DisplayName("8. Перевірка аудит-метаданих (CreatedBy)")
+    void whenCompanyFetchedThenAuditIsPresent() {
+        Company company = underTest.getAll().get(0);
+        assertNotNull(company.getCreatedBy());
+        assertEquals("admin_user", company.getCreatedBy());
     }
 
     @Test
-    public void shouldCalculateEmployeesForNestedChildren() {
-        Company top = new Company(null, 10);
-        Company child1 = new Company(top, 5);
-        Company child2 = new Company(top, 3);
-        Company grandChild = new Company(child1, 2);
-        
-        List<Company> allCompanies = Arrays.asList(top, child1, child2, grandChild);
-        
-        // top (10) + child1 (5) + child2 (3) + grandChild (2) = 20
-        assertEquals(20, service.getEmployeeCountForCompanyAndChildren(top, allCompanies));
-        
-        // child1 (5) + grandChild (2) = 7
-        assertEquals(7, service.getEmployeeCountForCompanyAndChildren(child1, allCompanies));
+    @DisplayName("9. Пошук головної компанії (Hierarchy Test)")
+    void whenGetTopLevelParentThenReturnRoot() {
+        // given
+        Company root = new Company(1L, "Root", "R", 100);
+        Company child = new Company(2L, "Child", "C", 50);
+        child.setParent(root);
+
+        // when
+        Company result = underTest.getTopLevelParent(child);
+
+        // then
+        assertEquals("Root", result.getName());
+    }
+
+    @Test
+    @DisplayName("10. Підрахунок співробітників з дочірніми (Hierarchy Test)")
+    void whenGetTotalEmployeesThenSumIsCorrect() {
+        // given
+        Company parent = new Company(1L, "Parent", "P", 100);
+        Company child1 = new Company(2L, "Child1", "C1", 50);
+        Company child2 = new Company(3L, "Child2", "C2", 30);
+
+        child1.setParent(parent);
+        child2.setParent(parent);
+
+        List<Company> all = List.of(parent, child1, child2);
+
+        // when
+        long total = underTest.getEmployeeCountForCompanyAndChildren(parent, all);
+
+        // then
+        assertEquals(180, total); // 100 + 50 + 30
     }
 }

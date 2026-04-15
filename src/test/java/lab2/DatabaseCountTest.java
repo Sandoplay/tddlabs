@@ -8,6 +8,7 @@ package lab2;
  @since 15.04.2026 - 16.29
 */
 
+import edu.levytskyi.repository.DatabaseManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

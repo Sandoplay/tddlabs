@@ -1,4 +1,4 @@
-package lab2;
+package edu.levytskyi.model;
 
 /*
  @author Sandoplay
