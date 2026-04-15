@@ -12,7 +12,11 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
 
+@Service
+@Primary
 public class CompanyServiceImpl implements ICompanyService {
 
     @Override

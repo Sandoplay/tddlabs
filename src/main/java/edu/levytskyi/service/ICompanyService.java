@@ -7,7 +7,9 @@ import edu.levytskyi.response.BaseMetaData;
 import edu.levytskyi.response.PaginationMetaData;
 import java.util.List;
 import edu.levytskyi.request.CompanyCreateRequest;
+import org.springframework.stereotype.Service;
 
+@Service
 public interface ICompanyService {
     Company getTopLevelParent(Company child);
     long getEmployeeCountForCompanyAndChildren(Company company, List<Company> companies);
