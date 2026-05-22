@@ -3,8 +3,10 @@ package edu.levytskyi;
 import edu.levytskyi.model.Company;
 import edu.levytskyi.repository.DatabaseManager;
 import edu.levytskyi.request.CompanyCreateRequest;
+import edu.levytskyi.request.CompanyPageRequest;
 import edu.levytskyi.response.ApiResponse;
 import edu.levytskyi.response.BaseMetaData;
+import edu.levytskyi.response.PaginationMetaData;
 import edu.levytskyi.service.CompanyServiceImpl;
 import edu.levytskyi.service.ICompanyService;
 import org.junit.jupiter.api.*;
@@ -122,5 +124,34 @@ class CompanyServiceTest {
 
         // then
         assertEquals(180, total); // 100 + 50 + 30
+    }
+
+    @Test
+    @DisplayName("11. Кастомна пагінація: запит неіснуючої сторінки повертає останню повну сторінку")
+    void whenRequestPageIsIncorrectThenGiveTheLastFullPage() {
+        // GIVEN
+        // У базі 30 компаній. Запитуємо 9-ту сторінку (якої немає), розмір сторінки = 4.
+        CompanyPageRequest request = new CompanyPageRequest(9, 4);
+
+        // WHEN
+        ApiResponse<PaginationMetaData, Company> response = underTest.getCompaniesPage(request);
+
+        // THEN
+        assertNotNull(response.getMeta());
+        assertNotNull(response.getData());
+
+        // Очікуємо індекс сторінки 6 (остання повна сторінка: 30 / 4 - 1 = 6)
+        assertEquals(6, response.getMeta().getNumber());
+
+        // Має повернутися рівно 4 елементи (повна сторінка даних)
+        assertEquals(4, response.getData().size());
+
+        assertEquals(30, response.getMeta().getTotalElements());
+        assertEquals(8, response.getMeta().getTotalPages());
+
+        // Перевіряємо прапорці пагінації
+        assertFalse(response.getMeta().isFirst());
+        // Сторінка 6 не є останньої взагалі (остання сторінка 7), тому isLast має бути false
+        assertFalse(response.getMeta().isLast());
     }
 }

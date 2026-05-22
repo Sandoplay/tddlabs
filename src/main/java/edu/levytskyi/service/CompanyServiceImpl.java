@@ -144,11 +144,27 @@ public class CompanyServiceImpl implements ICompanyService {
     @Override
     public ApiResponse<PaginationMetaData, Company> getCompaniesPage(CompanyPageRequest request) {
         List<Company> all = getAll();
-        int start = request.page() * request.size();
-        int end = Math.min(start + request.size(), all.size());
+        long totalElements = all.size();
+        int size = request.size();
+
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        int targetPage = adjustPageIfOutOfBounds(request.page(), size, totalElements, totalPages);
+
+        int start = targetPage * size;
+        int end = Math.min(start + size, all.size());
+
         List<Company> pagedData = (start < all.size()) ? all.subList(start, end) : new java.util.ArrayList<>();
-        PaginationMetaData meta = new PaginationMetaData(request.page(), request.size(), all.size());
+        PaginationMetaData meta = new PaginationMetaData(targetPage, size, totalElements);
+
         return new ApiResponse<>(meta, pagedData);
+    }
+
+    private int adjustPageIfOutOfBounds(int requestedPage, int size, long totalElements, int totalPages) {
+        if (requestedPage >= totalPages && totalPages > 0) {
+            int lastFullPage = (int) (totalElements / size) - 1;
+            return Math.max(lastFullPage, 0);
+        }
+        return requestedPage;
     }
 
 }
